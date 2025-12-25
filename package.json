@@ -1,0 +1,13 @@
+{
+  "name": "voice-party-server",
+  "version": "1.0.0",
+  "description": "WebSocket signaling server for Voice Party",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

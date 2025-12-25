@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Party Hub</title>
+    <!-- Using Inter font for a clean, premium look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary: #6C5DD3;
+            --primary-hover: #5b4cc4;
+            --accent: #FF754C;
+            --bg-dark: #0f0f13;
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-muted: #a0a0b0;
+            --danger: #ff4757;
+            --success: #2ed573;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --shadow: 0 10px 40px -10px rgba(0,0,0,0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; user-select: none; }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- ANIMATED BACKGROUND --- */
+        .ambient-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 15% 50%, rgba(108, 93, 211, 0.25), transparent 25%),
+                        radial-gradient(circle at 85% 30%, rgba(255, 117, 76, 0.15), transparent 25%);
+            animation: breathe 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* --- GLASSMOPHISM CARD UTILS --- */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover { transform: translateY(-2px); background: var(--primary-hover); box-shadow: 0 4px 12px rgba(108, 93, 211, 0.4); }
+        .btn:active { transform: scale(0.96); }
+        
+        .btn-secondary { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .btn-secondary:hover { background: rgba(255,255,255,0.2); box-shadow: none; }
+        
+        .btn-danger { background: rgba(255, 71, 87, 0.15); color: var(--danger); }
+        .btn-danger:hover { background: var(--danger); color: white; box-shadow: 0 4px 12px rgba(255, 71, 87, 0.3); }
+
+        .btn-icon { padding: 12px; border-radius: 50%; width: 48px; height: 48px; }
+
+        /* --- INPUTS --- */
+        input[type="text"] {
+            width: 100%;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            padding: 14px 18px;
+            border-radius: var(--radius-sm);
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.2s;
+        }
+        input[type="text"]:focus { border-color: var(--primary); background: rgba(0,0,0,0.3); }
+
+        /* --- SCREEN MANAGEMENT --- */
+        .screen {
+            position: absolute;
+            width: 100%;
+            max-width: 420px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
+        /* --- LOGIN SCREEN --- */
+        .logo-area { text-align: center; margin-bottom: 20px; }
+        .logo-icon { font-size: 3rem; margin-bottom: 10px; display: inline-block; filter: drop-shadow(0 0 10px var(--primary)); }
+        
+        /* --- PARTY HUB (LOBBY) --- */
+        .top-bar {
+            position: absolute;
+            top: 20px; right: 20px; left: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 6px 12px 6px 6px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+        .user-pill:hover { background: rgba(0,0,0,0.5); border-color: var(--glass-border); }
+        .avatar-small { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); }
+
+        .hub-actions { display: grid; grid-template-columns: 1fr; gap: 16px; }
+        .or-divider { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 10px 0; }
+
+        /* --- ACTIVE PARTY SCREEN --- */
+        .party-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .party-code-display {
+            background: rgba(255,255,255,0.05);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .party-code-display:hover { background: rgba(255,255,255,0.1); }
+
+        .members-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .member-card {
+            background: rgba(255,255,255,0.03);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            transition: 0.2s;
+        }
+        
+        .member-avatar {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: #555;
+            position: relative;
+            z-index: 1; /* Ensure content is above the ripple */
+            /* Smooth transition for volume changes */
+            transition: transform 0.1s linear, box-shadow 0.1s linear;
+            --vol: 0;
+        }
+
+        /* Create the ripple ring element */
+        .member-avatar::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            opacity: 0;
+            z-index: -1;
+            box-sizing: border-box;
+            /* Dynamic scaling based on volume variable */
+            transform: scale(calc(1 + var(--vol)));
+            opacity: calc(var(--vol) * 0.6);
+            transition: transform 0.05s linear, opacity 0.05s linear;
+        }
+
+        /* Talking Animation */
+        .member-card.talking .member-avatar {
+            /* Glow intensity depends on volume */
+            box-shadow: 0 0 0 calc(2px + (var(--vol) * 2px)) var(--primary), 
+                        0 0 calc(10px + (var(--vol) * 15px)) var(--primary);
+        }
+
+        /* Remove fixed loop animation, rely on JS volume updates */
+        .member-card.talking .member-avatar::after {
+            animation: none;
+        }
+
+        @keyframes ripple {
+            /* Animation removed in favor of dynamic volume scaling */
+        }
+
+        .mic-status {
+            position: absolute;
+            bottom: 0; right: 0;
+            background: var(--bg-dark);
+            border-radius: 50%;
+            padding: 4px;
+            width: 24px; height: 24px;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid #222;
+        }
+        .mic-status svg { width: 12px; height: 12px; fill: white; }
+        .member-card.muted .mic-status { background: var(--danger); }
+        .member-card.muted .member-avatar { opacity: 0.5; }
+
+        .controls-dock {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* --- PROFILE EDITOR MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none;
+            transition: 0.3s;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        
+        .color-picker { display: flex; gap: 10px; margin: 15px 0; justify-content: center; }
+        .color-dot { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .color-dot:hover { transform: scale(1.1); }
+        .color-dot.selected { border-color: white; transform: scale(1.2); }
+
+        /* --- UTILS --- */
+        .hidden { display: none !important; }
+        
+        /* Icons */
+        svg { width: 20px; height: 20px; fill: currentColor; }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+            background: #333; color: white; padding: 10px 20px; border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            opacity: 0; transition: 0.3s; z-index: 200;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    </style>
+</head>
+<body>
+
+    <div class="ambient-bg"></div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="toast">Action completed</div>
+
+    <!-- PROFILE EDITOR MODAL -->
+    <div id="profileModal" class="modal-overlay">
+        <div class="glass-card" style="padding: 30px; width: 320px; text-align: center;">
+            <h3 style="margin-bottom: 20px;">Edit Profile</h3>
+            <div id="modalAvatarPreview" class="member-avatar" style="margin: 0 auto 15px auto; width: 80px; height: 80px;"></div>
+            <input type="text" id="modalUsernameInput" placeholder="New Username" style="text-align: center; margin-bottom: 15px;">
+            <div class="color-picker" id="colorPicker">
+                <!-- Generated by JS -->
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-secondary" style="flex:1" onclick="ui.closeProfile()">Cancel</button>
+                <button class="btn" style="flex:1" onclick="app.saveProfile()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="screenLogin" class="screen glass-card active">
+        <div class="logo-area">
+            <div class="logo-icon">🎙️</div>
+            <h1>VoiceParty</h1>
+            <p style="color: var(--text-muted)">Crystal clear audio rooms</p>
+        </div>
+        <div style="margin-top: 20px;">
+            <label style="font-size: 0.9rem; margin-bottom: 8px; display: block; color: var(--text-muted);">Pick a Username</label>
+            <input type="text" id="usernameInput" placeholder="e.g. MicMaster99" autocomplete="off">
+        </div>
+        <button class="btn" onclick="app.login()" style="width: 100%; margin-top: 10px;">
+            Enter Party Hub
+        </button>
+    </div>
+
+    <!-- 2. LOBBY SCREEN -->
+    <div id="screenLobby" class="screen">
+        <div class="top-bar">
+            <h3 style="font-weight: 600;">Party Hub</h3>
+            <div class="user-pill" onclick="ui.openProfile()">
+                <div id="lobbyAvatar" class="avatar-small"></div>
+                <span id="lobbyUsername" style="font-size: 0.9rem; padding-right: 5px;">User</span>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 30px; margin-top: 40px;">
+            <h2 style="margin-bottom: 10px;">Ready to talk?</h2>
+            <p style="color: var(--text-muted); margin-bottom: 30px; font-size: 0.9rem;">Start a new room or join friends.</p>
+            
+            <div class="hub-actions">
+                <button class="btn" onclick="app.createParty()" style="width: 100%; height: 50px;">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+                    Create New Party
+                </button>
+                
+                <div class="or-divider">OR</div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="joinCodeInput" placeholder="Enter Code" style="text-transform: uppercase;">
+                    <button class="btn btn-secondary" onclick="app.joinParty()">Join</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. PARTY SCREEN -->
+    <div id="screenParty" class="screen">
+        <div class="glass-card" style="padding: 20px; height: 500px; display: flex; flex-direction: column;">
+            
+            <!-- Header -->
+            <div class="party-header">
+                <div>
+                    <h3 style="font-size: 1.1rem;">Voice Room</h3>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <span style="width: 8px; height: 8px; background: var(--success); border-radius: 50%; display: inline-block;"></span>
+                        <span style="font-size: 0.8rem; color: var(--success);">Connected</span>
+                    </div>
+                </div>
+                <div class="party-code-display" onclick="app.copyCode()">
+                    <span id="displayPartyCode">CODE</span>
+                    <svg style="width: 16px; opacity: 0.7;" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </div>
+            </div>
+
+            <!-- Members Grid -->
+            <div id="membersList" class="members-grid">
+                <!-- Rendered via JS -->
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-dock">
+                <button id="btnMute" class="btn btn-secondary btn-icon" onclick="app.toggleMute()">
+                    <!-- Mic Icon -->
+                    <svg id="iconMicOn" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                    <!-- Mic Off Icon -->
+                    <svg id="iconMicOff" class="hidden" viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02 5.06L5.88 7.1c-.27.06-.54.11-.82.11H3.06c-.45 0-.67.54-.35.85l7.14 7.14c.16.16.37.25.6.25h1.22c.26 0 .5-.11.69-.29l2.6-2.6v.1zM12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 .55-.15 1.06-.41 1.51l2.35 2.35c.66-.99 1.06-2.18 1.06-3.46v-.4h-1.5l-1.5 1.5v1.5zm-5.14-1.9l1.6 1.6c.21.21.5.3.77.24 1.31-.28 2.45-1.12 3.12-2.31l1.5-2.61L4.27 4.27 3 5.54l2.6 2.6V11c0 1.1.9 2 2 2h-1.74c-.45 0-.85.19-1.13.5l-1.87 1.87z"/></svg>
+                </button>
+                
+                <button class="btn btn-danger btn-icon" onclick="app.leaveParty()">
+                    <svg viewBox="0 0 24 24" style="transform: rotate(180deg);"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+<script>
+let peerConnections = {};
+let localStream = null;
+const rtcConfig = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" }
+    ]
+};
+
+/**
+ * AUDIO ENGINE
+ * Handles sound effects using Web Audio API to avoid external file dependencies.
+ */
+class SoundEngine {
+    constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.3; // volume
+        this.masterGain.connect(this.ctx.destination);
+    }
+
+    playTone(freq, type, duration, slideTo = null) {
+        if(this.ctx.state === 'suspended') this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        if(slideTo) {
+            osc.frequency.exponentialRampToValueAtTime(slideTo, this.ctx.currentTime + duration);
+        }
+
+        gain.gain.setValueAtTime(1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playHover() { this.playTone(400, 'sine', 0.05); }
+    playClick() { this.playTone(600, 'triangle', 0.1); }
+    playJoin() { 
+        this.playTone(300, 'sine', 0.1); 
+        setTimeout(() => this.playTone(600, 'sine', 0.2), 100);
+    }
+    playLeave() {
+        this.playTone(600, 'sine', 0.1);
+        setTimeout(() => this.playTone(300, 'sine', 0.2), 100);
+    }
+    playMute(isMuted) {
+        if(isMuted) this.playTone(300, 'sawtooth', 0.1, 200);
+        else this.playTone(200, 'sine', 0.1, 400);
+    }
+}
+
+const sfx = new SoundEngine();
+// 🔌 WebSocket connection
+const socket = new WebSocket("ws://localhost:3000");
+
+socket.onopen = () => {
+    console.log("✅ WebSocket connected");
+};
+
+socket.onerror = (err) => {
+    console.error("❌ WebSocket error", err);
+};
+
+socket.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === "room-update") {
+        app.party.members = data.users
+            .filter(u => u.name !== app.user.name)
+            .map(u => ({
+                id: u.id,
+                name: u.name,
+                color: "#6C5DD3",
+                isMuted: false,
+                isTalking: false
+            }));
+
+        app.refreshPartyUI();
+
+        if (!localStream) return;
+
+        for (const member of app.party.members) {
+            if (!peerConnections[member.id]) {
+                const pc = createPeer(member.id);
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+
+                socket.send(JSON.stringify({
+                    type: "offer",
+                    target: member.id,
+                    offer
+                }));
+            }
+        }
+    } // ✅ THIS WAS MISSING
+
+    // ---- WebRTC signaling ----
+    if (data.type === "offer") {
+        const pc = createPeer(data.from);
+        await pc.setRemoteDescription(data.offer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.send(JSON.stringify({
+            type: "answer",
+            target: data.from,
+            answer
+        }));
+    }
+
+    if (data.type === "answer") {
+        const pc = peerConnections[data.from];
+        if (pc) await pc.setRemoteDescription(data.answer);
+    }
+
+    if (data.type === "ice") {
+        const pc = peerConnections[data.from];
+        if (pc) await pc.addIceCandidate(data.candidate);
+    }
+};
+function createPeer(userId) {
+    const pc = new RTCPeerConnection(rtcConfig);
+
+    // ✅ ONLY add tracks if mic is ready
+    if (localStream) {
+        localStream.getTracks().forEach(track => {
+            pc.addTrack(track, localStream);
+        });
+    }
+
+    // Receive audio from peer
+    pc.ontrack = (event) => {
+        const audio = document.createElement("audio");
+        audio.srcObject = event.streams[0];
+       audio.autoplay = true;
+audio.muted = false;
+
+audio.play().catch(err => {
+    console.warn("Autoplay blocked, user interaction required", err);
+});
+
+        document.body.appendChild(audio);
+    };
+
+    // ICE candidates
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.send(JSON.stringify({
+                type: "ice",
+                target: userId,
+                candidate: event.candidate
+            }));
+        }
+    };
+
+    peerConnections[userId] = pc;
+    return pc;
+}
+
+
+/**
+ * UI CONTROLLER
+ * Handles screen transitions, modals, and rendering lists.
+ */
+const ui = {
+    screens: {
+        login: document.getElementById('screenLogin'),
+        lobby: document.getElementById('screenLobby'),
+        party: document.getElementById('screenParty')
+    },
+    
+    showScreen(screenName) {
+        // Hide all
+        Object.values(this.screens).forEach(el => el.classList.remove('active'));
+        // Show target after brief delay for smooth transition
+        setTimeout(() => {
+            this.screens[screenName].classList.add('active');
+        }, 100);
+    },
+
+    toast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2000);
+    },
+
+    openProfile() {
+        sfx.playClick();
+        document.getElementById('profileModal').classList.add('open');
+        document.getElementById('modalUsernameInput').value = app.user.name;
+        this.renderColorPicker();
+        this.updateModalPreview();
+    },
+
+    closeProfile() {
+        sfx.playClick();
+        document.getElementById('profileModal').classList.remove('open');
+    },
+
+    renderColorPicker() {
+        const colors = ['#FF754C', '#6C5DD3', '#2ed573', '#e056fd', '#f1c40f', '#e74c3c'];
+        const container = document.getElementById('colorPicker');
+        container.innerHTML = '';
+        colors.forEach(c => {
+            const dot = document.createElement('div');
+            dot.className = `color-dot ${app.tempColor === c ? 'selected' : ''}`;
+            dot.style.backgroundColor = c;
+            dot.onclick = () => {
+                app.tempColor = c;
+                this.renderColorPicker();
+                this.updateModalPreview();
+                sfx.playHover();
+            };
+            container.appendChild(dot);
+        });
+    },
+
+    updateModalPreview() {
+        const prev = document.getElementById('modalAvatarPreview');
+        prev.style.backgroundColor = app.tempColor || app.user.color;
+    },
+
+    renderMembers(members, localUser) {
+        const list = document.getElementById('membersList');
+        list.innerHTML = '';
+
+        // Helper to create member card
+        const createCard = (m, isLocal) => {
+            const div = document.createElement('div');
+            div.className = `member-card ${m.isMuted ? 'muted' : ''} ${m.isTalking ? 'talking' : ''}`;
+            div.innerHTML = `
+                <div class="member-avatar" style="background-color: ${m.color}">
+                    <div class="mic-status">
+                        ${m.isMuted 
+                            ? '<svg viewBox="0 0 24 24"><path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02 5.06L5.88 7.1c-.27.06-.54.11-.82.11H3.06c-.45 0-.67.54-.35.85l7.14 7.14c.16.16.37.25.6.25h1.22c.26 0 .5-.11.69-.29l2.6-2.6v.1zM12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 .55-.15 1.06-.41 1.51l2.35 2.35c.66-.99 1.06-2.18 1.06-3.46v-.4h-1.5l-1.5 1.5v1.5z"/></svg>' 
+                            : '<svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>'}
+                    </div>
+                </div>
+                <div style="font-weight: 500; font-size: 0.9rem;">${m.name} ${isLocal ? '(You)' : ''}</div>
+            `;
+            return div;
+        };
+
+        // Render Local User with ID for dynamic updates
+        const localCard = createCard(localUser, true);
+        localCard.id = 'local-card';
+        list.appendChild(localCard);
+
+        // Render Remote Members
+        members.forEach(m => list.appendChild(createCard(m, false)));
+    }
+};
+
+/**
+ * APP LOGIC
+ * Manages state, media stream, and mock party logic.
+ */
+const app = {
+    user: { name: '', color: '#6C5DD3', isMuted: false, isTalking: false },
+    tempColor: null, // For modal editing
+    party: { code: null, members: [] },
+    
+    // Web Audio Logic for Mic
+    audioContext: null,
+    analyser: null,
+    microphone: null,
+    volumeInterval: null,
+    simulationInterval: null,
+
+    init() {
+        // Add global hover listeners for sound
+        document.querySelectorAll('button, .user-pill, .party-code-display').forEach(el => {
+            el.addEventListener('mouseenter', () => sfx.playHover());
+        });
+    },
+
+    login() {
+        const input = document.getElementById('usernameInput');
+        if(!input.value.trim()) return;
+
+        this.user.name = input.value.trim();
+        this.updateLobbyUI();
+        
+        sfx.playClick();
+        ui.showScreen('lobby');
+    },
+
+    updateLobbyUI() {
+        document.getElementById('lobbyUsername').innerText = this.user.name;
+        document.getElementById('lobbyAvatar').style.backgroundColor = this.user.color;
+    },
+
+    saveProfile() {
+        const input = document.getElementById('modalUsernameInput');
+        if(input.value.trim()) this.user.name = input.value.trim();
+        if(this.tempColor) this.user.color = this.tempColor;
+        
+        this.updateLobbyUI();
+        ui.closeProfile();
+        ui.toast('Profile saved');
+    },
+
+    /* --- PARTY LOGIC --- */
+
+    createParty() {
+        sfx.playClick();
+        // Generate random 5-char code
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for(let i=0; i<5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+        
+        this.enterParty(code);
+    },
+
+    joinParty() {
+        sfx.playClick();
+        const code = document.getElementById('joinCodeInput').value.toUpperCase();
+        if(code.length !== 5) {
+            ui.toast('Invalid Party Code (Needs 5 chars)');
+            return;
+        }
+        this.enterParty(code);
+    },
+enterParty(code) {
+    this.party.code = code;
+    this.party.members = [];
+    document.getElementById('displayPartyCode').innerText = code;
+
+    ui.showScreen('party');
+    sfx.playJoin();
+
+    socket.send(JSON.stringify({
+        type: "join-room",
+        room: code,
+        name: this.user.name
+    }));
+
+    this.startMicrophone();
+    this.refreshPartyUI();
+},   // ✅ THIS COMMA WAS MISSING
+
+leaveParty() {
+    sfx.playLeave();
+    this.stopMicrophone();
+        
+    this.party.code = null;
+    this.party.members = [];
+    ui.showScreen('lobby');
+},
+
+    copyCode() {
+        // Fallback for iframe restrictions
+        const textArea = document.createElement("textarea");
+        textArea.value = this.party.code;
+        
+        // Ensure it's not visible but part of DOM
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            ui.toast('Code copied to clipboard!');
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+            ui.toast('Failed to copy code');
+        }
+        
+        document.body.removeChild(textArea);
+        sfx.playClick();
+    },
+
+    /* --- AUDIO / MEDIA --- */
+
+async startMicrophone() {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            }
+        });
+
+        // 🎧 Audio context for volume detection
+        this.audioContext = new AudioContext();
+        const source = this.audioContext.createMediaStreamSource(localStream);
+        this.analyser = this.audioContext.createAnalyser();
+        this.analyser.fftSize = 256;
+
+        source.connect(this.analyser);
+
+        const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+
+        // 🔁 Volume loop (this is where isTalking lives)
+        this.volumeInterval = setInterval(() => {
+            this.analyser.getByteFrequencyData(dataArray);
+
+            const avg =
+                dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+
+            const volume = avg / 255;
+
+            // ✅ THIS LINE YOU ASKED ABOUT
+            this.user.isTalking = volume > 0.04;
+
+            this.refreshPartyUI();
+        }, 100);
+
+        console.log("🎤 Mic + volume analyser ready");
+
+    } catch (err) {
+        console.error("Mic error:", err);
+        alert("Microphone permission required");
+    }
+},
+
+
+
+    stopMicrophone() {
+        if(this.microphone) {
+            this.microphone.mediaStream.getTracks().forEach(t => t.stop());
+            this.microphone.disconnect();
+        }
+        if(this.audioContext) this.audioContext.close();
+        clearInterval(this.volumeInterval);
+    },
+
+toggleMute() {
+    this.user.isMuted = !this.user.isMuted;
+
+    if (localStream) {
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = !this.user.isMuted;
+        });
+    }
+
+    sfx.playMute(this.user.isMuted);
+
+    const btn = document.getElementById('btnMute');
+    const onIcon = document.getElementById('iconMicOn');
+    const offIcon = document.getElementById('iconMicOff');
+
+    if (this.user.isMuted) {
+        btn.classList.add('btn-danger');
+        btn.classList.remove('btn-secondary');
+        onIcon.classList.add('hidden');
+        offIcon.classList.remove('hidden');
+    } else {
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-secondary');
+        onIcon.classList.remove('hidden');
+        offIcon.classList.add('hidden');
+    }
+
+    this.refreshPartyUI();
+}, // 🔥 THIS COMMA IS REQUIRED
+
+refreshPartyUI() {
+    ui.renderMembers(this.party.members, this.user);
+}
+}; // ✅ CLOSE app OBJECT PROPERLY
+
+// Start
+app.init();
+</script>
+</body>
+</html>
